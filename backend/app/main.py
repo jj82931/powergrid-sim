@@ -5,6 +5,7 @@ from .data import list_feeders
 from .sim import simulate, pv_sweep
 from .cache import cache_get, cache_set
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import HTTPException
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger("api")
@@ -52,3 +53,11 @@ app.add_middleware(
     allow_origins=["*"], allow_credentials=True,
     allow_methods=["*"], allow_headers=["*"],
 )
+
+@app.get("/network/{feeder_id}")
+def network_api(feeder_id: str):
+    from .data import load_network
+    try:
+        return load_network(feeder_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="feeder not found")

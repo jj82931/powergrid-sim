@@ -26,11 +26,14 @@ export default function SweepChart({ feeder, hours }: Props) {
   const draw = (pts: { pv: number; violations: number }[]) => {
     const c = canvasRef.current;
     if (!c) return;
-    const ctx = c.getContext("2d")!;
+    const ctx = c.getContext("2d");
+    if (!ctx) {
+      // 테스트(jsdom)나 일부 브라우저에서 2D 컨텍스트가 없을 수 있음
+      return;
+    }
     const W = c.width,
       H = c.height;
     ctx.clearRect(0, 0, W, H);
-
     // axes
     ctx.beginPath();
     ctx.moveTo(40, 10);
@@ -52,7 +55,7 @@ export default function SweepChart({ feeder, hours }: Props) {
     });
     ctx.stroke();
 
-    // all zero이면 마커 표시 + 안내
+    // 전 구간 0이면 마커와 안내 표시
     const allZero = pts.every((p) => p.violations === 0);
     if (allZero) {
       pts.forEach((p) => {
@@ -65,7 +68,6 @@ export default function SweepChart({ feeder, hours }: Props) {
       ctx.fillText("No violations across sweep", 50, 22);
     }
 
-    // labels
     ctx.fillText("PV adoption", W / 2 - 20, H - 10);
     ctx.fillText("violations", 5, 20);
   };

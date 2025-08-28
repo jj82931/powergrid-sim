@@ -39,3 +39,18 @@ export async function postSweep(body: {
   if (!r.ok) throw new Error("failed to run sweep");
   return r.json();
 }
+
+export type Bus = { id: string; x: number; y: number };
+export type Line = { from: string; to: string };
+export type Network = {
+  feeder_id: string;
+  base_kv: number;
+  buses: Bus[];
+  lines: Line[];
+};
+
+export async function getNetwork(feeder_id: string): Promise<Network> {
+  const r = await fetch(`${API_BASE}/network/${feeder_id}`);
+  if (!r.ok) throw new Error("failed to fetch network");
+  return r.json();
+}

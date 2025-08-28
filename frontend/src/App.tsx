@@ -5,6 +5,8 @@ import ResultsCard from "./components/ResultsCard";
 import { getFeeders, postSim } from "./services/api";
 import CompareTab from "./components/CompareTab";
 import SweepChart from "./components/SweepChart";
+import SvgLineView from "./components/SvgLineView";
+import MapView from "./components/MapView";
 
 export default function App() {
   const [feeders, setFeeders] = useState<string[]>([]);
@@ -15,7 +17,9 @@ export default function App() {
   const [res, setRes] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [tab, setTab] = useState<"run" | "compare" | "sweep">("run");
+  const [tab, setTab] = useState<"run" | "compare" | "sweep" | "network">(
+    "run"
+  );
   const [hours, setHours] = useState<number[]>([28, 48, 74]); // 기본 3개 시점
 
   useEffect(() => {
@@ -26,6 +30,26 @@ export default function App() {
       })
       .catch((e) => setErr(String(e)));
   }, []);
+
+  // 최초 1회 복원
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("scenario");
+      if (raw) {
+        const s = JSON.parse(raw);
+        if (typeof s.feeder === "string") setFeeder(s.feeder);
+        if (typeof s.pv === "number") setPv(s.pv);
+        if (typeof s.bat === "number") setBat(s.bat);
+        if (typeof s.hour === "number") setHour(s.hour);
+      }
+    } catch (_e) {}
+  }, []);
+
+  // 변경시 저장 - 아주 단순하게 저장
+  useEffect(() => {
+    const s = { feeder, pv, bat, hour };
+    localStorage.setItem("scenario", JSON.stringify(s));
+  }, [feeder, pv, bat, hour]);
 
   const onPreset = (name: string) => {
     if (name === "morning") {
@@ -74,9 +98,39 @@ export default function App() {
 
       {/* 탭 버튼 */}
       <div style={{ display: "flex", gap: 8, margin: "8px 0" }}>
-        <button onClick={() => setTab("run")}>Run</button>
-        <button onClick={() => setTab("compare")}>Compare</button>
-        <button onClick={() => setTab("sweep")}>PV Sweep</button>
+        <button
+          onClick={() => setTab("run")}
+          disabled={tab === "run"}
+          aria-current={tab === "run" ? "page" : undefined}
+          style={{ fontWeight: tab === "run" ? "bold" : "normal" }}
+          title="Switch to Run tab"
+        >
+          Run
+        </button>
+        <button
+          onClick={() => setTab("compare")}
+          disabled={tab === "compare"}
+          aria-current={tab === "compare" ? "page" : undefined}
+          style={{ fontWeight: tab === "compare" ? "bold" : "normal" }}
+        >
+          Compare
+        </button>
+        <button
+          onClick={() => setTab("sweep")}
+          disabled={tab === "sweep"}
+          aria-current={tab === "sweep" ? "page" : undefined}
+          style={{ fontWeight: tab === "sweep" ? "bold" : "normal" }}
+        >
+          PV Sweep
+        </button>
+        <button
+          onClick={() => setTab("network")}
+          disabled={tab === "network"}
+          aria-current={tab === "network" ? "page" : undefined}
+          style={{ fontWeight: tab === "network" ? "bold" : "normal" }}
+        >
+          Network
+        </button>
       </div>
 
       {err && <div style={{ color: "crimson" }}>Error: {err}</div>}
@@ -123,16 +177,19 @@ export default function App() {
         />
       </div>
 
-      {/* 탭별 뷰 */}
       {tab === "run" && (
         <>
-          <button onClick={run} disabled={!feeder || loading}>
-            {loading ? "Running..." : "Run"}
+          <button
+            data-testid="run-sim"
+            aria-label="Run simulation"
+            onClick={run}
+            disabled={!feeder || loading}
+          >
+            {loading ? "Running..." : "Run simulation"}
           </button>
           <ResultsCard result={res} />
         </>
       )}
-
       {tab === "compare" && (
         <CompareTab feeders={feeders} pv={pv} bat={bat} hour={hour} />
       )}
@@ -154,6 +211,13 @@ export default function App() {
             />
           </div>
           <SweepChart feeder={feeder} hours={hours} />
+        </>
+      )}
+
+      {tab === "network" && (
+        <>
+          <SvgLineView feeder={feeder} />
+          <MapView feeder={feeder} />
         </>
       )}
     </div>
