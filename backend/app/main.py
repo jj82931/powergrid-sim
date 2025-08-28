@@ -4,6 +4,7 @@ import time, logging
 from .data import list_feeders
 from .sim import simulate, pv_sweep
 from .cache import cache_get, cache_set
+from fastapi.middleware.cors import CORSMiddleware
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger("api")
@@ -45,3 +46,9 @@ def simulate_api(inp: SimIn):
 @app.post("/sweep")
 def sweep_api(inp: SweepIn):
     return pv_sweep(inp.feeder_id, inp.hours)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], allow_credentials=True,
+    allow_methods=["*"], allow_headers=["*"],
+)
