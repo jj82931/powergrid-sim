@@ -6,6 +6,7 @@ from .sim import simulate, pv_sweep
 from .cache import cache_get, cache_set
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import HTTPException
+from .rules import advice
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger("api")
@@ -41,8 +42,10 @@ def simulate_api(inp: SimIn):
     if c:
         return c
     res = simulate(inp.feeder_id, inp.pv_adoption, inp.battery_adoption, inp.hour)
+    res["advice"] = advice(res["transformer_loading"], res["min_voltage_pu"], res["voltage_violation"])
     cache_set(key, res)
     return res
+
 
 @app.post("/sweep")
 def sweep_api(inp: SweepIn):

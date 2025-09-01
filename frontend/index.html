@@ -5,6 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>LV Mini Twin</title>
   </head>
+  <style>
+  @media print {
+    /* 컨트롤 숨기기 */
+    button, input, select { display: none !important; }
+    /* 결과 카드만 넓게 인쇄 */
+    #root { padding: 0; }
+    h1 { margin-bottom: 8px; }
+    pre { white-space: pre-wrap; }
+  }
+</style>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>

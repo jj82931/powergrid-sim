@@ -7,6 +7,7 @@ import CompareTab from "./components/CompareTab";
 import SweepChart from "./components/SweepChart";
 import SvgLineView from "./components/SvgLineView";
 import MapView from "./components/MapView";
+import { toCSV, downloadCSV } from "./utils/csv";
 
 export default function App() {
   const [feeders, setFeeders] = useState<string[]>([]);
@@ -90,6 +91,22 @@ export default function App() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const exportRunCSV = () => {
+    if (!res) return;
+    const row = {
+      feeder_id: res.feeder_id,
+      hour: res.hour,
+      pv_adoption: pv,
+      battery_adoption: bat,
+      transformer_loading: res.transformer_loading,
+      min_voltage_pu: res.min_voltage_pu,
+      voltage_violation: res.voltage_violation,
+      advice: res.advice || "",
+    };
+    const csv = toCSV([row]);
+    downloadCSV(`run_${res.feeder_id}_${res.hour}.csv`, csv);
   };
 
   return (
@@ -187,6 +204,17 @@ export default function App() {
           >
             {loading ? "Running..." : "Run simulation"}
           </button>
+
+          {/* 내보내기와 인쇄 */}
+          <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
+            <button onClick={exportRunCSV} disabled={!res}>
+              Export CSV
+            </button>
+            <button onClick={() => window.print()} disabled={!res}>
+              Print summary
+            </button>
+          </div>
+
           <ResultsCard result={res} />
         </>
       )}
