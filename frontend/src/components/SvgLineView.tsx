@@ -1,27 +1,32 @@
 import { useEffect, useMemo, useState } from "react";
-import { getNetwork } from "../services/api";
+import { getNetwork, type Network } from "../services/api";
 
-type Bus = { id: string; x: number; y: number };
-type Line = { from: string; to: string };
-type Net = { buses: Bus[]; lines: Line[] };
+type Props = { feeder: string; network?: Network };
 
-type Props = { feeder: string };
-
-export default function SvgLineView({ feeder }: Props) {
-  const [net, setNet] = useState<Net | null>(null);
+export default function SvgLineView({ feeder, network }: Props) {
+  const [net, setNet] = useState<Network | null>(network ?? null);
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
+    if (network) {
+      setNet(network);
+      setErr(null);
+      return;
+    }
     let alive = true;
-    setErr(null);
     setNet(null);
+    setErr(null);
     getNetwork(feeder)
-      .then((n) => alive && setNet(n))
-      .catch((e) => alive && setErr(String(e)));
+      .then((n) => {
+        if (alive) setNet(n);
+      })
+      .catch((e) => {
+        if (alive) setErr(String(e));
+      });
     return () => {
       alive = false;
     };
-  }, [feeder]);
+  }, [feeder, network]);
 
   const view = useMemo(() => {
     if (!net) return null;
@@ -74,7 +79,6 @@ export default function SvgLineView({ feeder }: Props) {
       );
     });
 
-    // 라벨은 최대 10개만
     const labelEvery = Math.max(1, Math.ceil(buses.length / 10));
     const nodeElems = buses.map((b, i) => (
       <g key={b.id}>

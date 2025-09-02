@@ -1,0 +1,21 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        # 브라우저가 호출할 API 주소이므로 host 기준으로 쓴다
+        VITE_API_URL: "http://127.0.0.1:8000"
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
