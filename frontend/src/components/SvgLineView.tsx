@@ -1,85 +1,121 @@
-import { useEffect, useState } from "react";
-import { getNetwork, Network } from "../services/api";
+import { useEffect, useMemo, useState } from "react";
+import { getNetwork } from "../services/api";
 
-type Props = { feeder: string; network?: Network };
+type Bus = { id: string; x: number; y: number };
+type Line = { from: string; to: string };
+type Net = { buses: Bus[]; lines: Line[] };
 
-export default function SvgLineView({ feeder, network: netProp }: Props) {
-  const [net, setNet] = useState<Network | null>(netProp || null);
+type Props = { feeder: string };
+
+export default function SvgLineView({ feeder }: Props) {
+  const [net, setNet] = useState<Net | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
-    if (!netProp && feeder) {
-      getNetwork(feeder)
-        .then((n) => {
-          if (alive) setNet(n);
-        })
-        .catch((e) => setErr(String(e)));
-    } else {
-      setNet(netProp || null);
-    }
+    setErr(null);
+    setNet(null);
+    getNetwork(feeder)
+      .then((n) => alive && setNet(n))
+      .catch((e) => alive && setErr(String(e)));
     return () => {
       alive = false;
     };
-  }, [feeder, netProp]);
+  }, [feeder]);
 
-  if (err) return <div style={{ color: "crimson" }}>Error: {err}</div>;
-  if (!net) return <div>Loading network...</div>;
+  const view = useMemo(() => {
+    if (!net) return null;
 
-  const xs = net.buses.map((b) => b.x);
-  const ys = net.buses.map((b) => b.y);
-  const minX = Math.min(...xs),
-    maxX = Math.max(...xs);
-  const minY = Math.min(...ys),
-    maxY = Math.max(...ys);
-  const pad = 10;
-  const W = 500,
-    H = 300;
-  const sx = (x: number) =>
-    pad + (x - minX) * ((W - 2 * pad) / Math.max(1, maxX - minX));
-  const sy = (y: number) =>
-    H - pad - (y - minY) * ((H - 2 * pad) / Math.max(1, maxY - minY));
+    const buses = net.buses;
+    const lines = net.lines;
 
-  const busIndex = new Map(net.buses.map((b, i) => [b.id, i]));
+    const W = 680,
+      H = 300,
+      pad = 20;
+
+    const xs = buses.map((b) => b.x);
+    const ys = buses.map((b) => b.y);
+    const minX = Math.min(...xs),
+      maxX = Math.max(...xs);
+    const minY = Math.min(...ys),
+      maxY = Math.max(...ys);
+
+    const spanX = Math.max(1e-6, maxX - minX);
+    let spanY = maxY - minY;
+    const yFlat = Math.abs(spanY) < 1e-6;
+    if (yFlat) spanY = 1;
+
+    const sx = (W - 2 * pad) / spanX;
+    const sy = (H - 2 * pad) / spanY;
+
+    const mapX = (x: number) => pad + (x - minX) * sx;
+    const mapY = (y: number) => (yFlat ? H / 2 : H - pad - (y - minY) * sy);
+
+    const css = getComputedStyle(document.documentElement);
+    const STROKE = (css.getPropertyValue("--accent") || "#22d3ee").trim();
+    const NODE = (css.getPropertyValue("--primary") || "#4f7cff").trim();
+    const MUTED = (css.getPropertyValue("--muted") || "#9aa3b2").trim();
+
+    const lineElems = lines.map((ln, idx) => {
+      const f = buses.find((b) => b.id === ln.from)!;
+      const t = buses.find((b) => b.id === ln.to)!;
+      return (
+        <line
+          key={`l-${idx}`}
+          x1={mapX(f.x)}
+          y1={mapY(f.y)}
+          x2={mapX(t.x)}
+          y2={mapY(t.y)}
+          stroke={STROKE}
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeOpacity={0.9}
+        />
+      );
+    });
+
+    // 라벨은 최대 10개만
+    const labelEvery = Math.max(1, Math.ceil(buses.length / 10));
+    const nodeElems = buses.map((b, i) => (
+      <g key={b.id}>
+        <circle cx={mapX(b.x)} cy={mapY(b.y)} r={3.2} fill={NODE} />
+        {i % labelEvery === 0 && (
+          <text
+            x={mapX(b.x)}
+            y={mapY(b.y) + 12}
+            fontSize={10}
+            textAnchor="middle"
+            fill={MUTED}
+          >
+            {b.id}
+          </text>
+        )}
+      </g>
+    ));
+
+    return (
+      <svg
+        width="100%"
+        height={H}
+        viewBox={`0 0 ${W} ${H}`}
+        style={{
+          background: "rgba(255,255,255,.02)",
+          border: "1px solid var(--border)",
+          borderRadius: 12,
+        }}
+      >
+        {lineElems}
+        {nodeElems}
+      </svg>
+    );
+  }, [net]);
 
   return (
-    <div style={{ marginTop: 12 }}>
-      <h3>SVG Line View</h3>
-      <svg
-        width={W}
-        height={H}
-        style={{ border: "1px solid #ddd", background: "#fff" }}
-      >
-        {/* lines */}
-        {net.lines.map((ln, i) => {
-          const fi = busIndex.get(ln.from) ?? 0;
-          const ti = busIndex.get(ln.to) ?? 0;
-          const fb = net.buses[fi],
-            tb = net.buses[ti];
-          return (
-            <line
-              key={i}
-              x1={sx(fb.x)}
-              y1={sy(fb.y)}
-              x2={sx(tb.x)}
-              y2={sy(tb.y)}
-              stroke="#444"
-              strokeWidth={1.5}
-            />
-          );
-        })}
-        {/* buses */}
-        {net.buses.map((b, i) => (
-          <g key={b.id}>
-            <circle cx={sx(b.x)} cy={sy(b.y)} r={3} fill="#0a84ff" />
-            {i % 5 === 0 && (
-              <text x={sx(b.x) + 5} y={sy(b.y) - 5} fontSize="10">
-                {b.id}
-              </text>
-            )}
-          </g>
-        ))}
-      </svg>
+    <div className="card">
+      <h3 style={{ marginTop: 0 }}>SVG Line View</h3>
+      {!net && !err && <div style={{ color: "var(--muted)" }}>Loading...</div>}
+      {err && <div style={{ color: "tomato" }}>Error: {err}</div>}
+      {view}
     </div>
   );
 }

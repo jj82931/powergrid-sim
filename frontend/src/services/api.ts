@@ -1,56 +1,41 @@
-export type SimInput = {
-  feeder_id: string;
-  pv_adoption: number;
-  battery_adoption: number;
-  hour: number;
-};
+const BASE =
+  (import.meta as any).env?.VITE_API_URL?.replace(/\/$/, "") ||
+  "http://127.0.0.1:8000";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
-
-export async function getFeeders(): Promise<{ feeders: string[] }> {
-  const r = await fetch(`${API_BASE}/feeders`);
-  if (!r.ok) throw new Error("failed to fetch feeders");
-  return r.json();
+async function parseJson(r: Response) {
+  const text = await r.text(); // 먼저 텍스트로 읽음
+  if (!r.ok)
+    throw new Error(`HTTP ${r.status} ${r.statusText}: ${text.slice(0, 200)}`);
+  const ct = r.headers.get("content-type") || "";
+  if (!ct.includes("application/json"))
+    throw new Error(`Expected JSON, got ${ct}: ${text.slice(0, 200)}`);
+  return JSON.parse(text);
 }
 
-export async function postSim(body: SimInput): Promise<any> {
-  const r = await fetch(`${API_BASE}/simulate`, {
+export async function getFeeders() {
+  const r = await fetch(`${BASE}/feeders`);
+  return parseJson(r);
+}
+
+export async function postSim(body: any) {
+  const r = await fetch(`${BASE}/simulate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!r.ok) throw new Error("failed to run simulate");
-  return r.json();
+  return parseJson(r);
 }
 
-export async function postSweep(body: {
-  feeder_id: string;
-  hours: number[];
-}): Promise<{
-  points: { pv: number; violations: number }[];
-  hosting_capacity: number;
-}> {
-  const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
-  const r = await fetch(`${API_BASE}/sweep`, {
+export async function postSweep(body: any) {
+  const r = await fetch(`${BASE}/sweep`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!r.ok) throw new Error("failed to run sweep");
-  return r.json();
+  return parseJson(r);
 }
 
-export type Bus = { id: string; x: number; y: number };
-export type Line = { from: string; to: string };
-export type Network = {
-  feeder_id: string;
-  base_kv: number;
-  buses: Bus[];
-  lines: Line[];
-};
-
-export async function getNetwork(feeder_id: string): Promise<Network> {
-  const r = await fetch(`${API_BASE}/network/${feeder_id}`);
-  if (!r.ok) throw new Error("failed to fetch network");
-  return r.json();
+export async function getNetwork(id: string) {
+  const r = await fetch(`${BASE}/net/${id}`);
+  return parseJson(r);
 }

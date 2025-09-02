@@ -1,26 +1,45 @@
-# 단순 합성 LV 네트워크 생성기
+# 단순 합성 LV 네트워크 생성기 (feeder_11 = outlier)
 from __future__ import annotations
-import json, random, math
+import json, random
 from pathlib import Path
 
 RSEED = 42
 
 def make_feeder(idx: int, n_nodes: int = 30) -> dict:
     random.seed(RSEED + idx)
-    # 버스 좌표 대략적 그리드
     buses = [{"id": f"bus_{i}", "x": i % 10, "y": i // 10} for i in range(n_nodes)]
-    # 간선: 선형 트리 + 몇 개의 가지
     lines = []
-    for i in range(1, n_nodes):
-        parent = max(0, i - random.randint(1, 3))
-        lines.append({"from": f"bus_{parent}", "to": f"bus_{i}", "r_ohm": 0.2, "x_ohm": 0.08})
-    return {
-        "feeder_id": f"feeder_{idx:02d}",
-        "transformer_kva": 500,
-        "buses": buses,
-        "lines": lines,
-        "base_kv": 0.4,
-    }
+
+    if idx == 11:
+        buses = [{"id": f"bus_{i}", "x": i, "y": 0} for i in range(n_nodes)]
+        lines = []
+        for i in range(1, n_nodes):
+            lines.append({
+                "from": f"bus_{i-1}",
+                "to": f"bus_{i}",
+                "r_ohm": 0.30,
+                "x_ohm": 0.10,
+                "length_km": 0.10
+            })
+        return {
+            "feeder_id": f"feeder_{idx:02d}",
+            "transformer_kva": 500,
+            "buses": buses,
+            "lines": lines,
+            "base_kv": 0.4,
+            "load_scale": 20.0  # ← 10에서 20 정도로
+        }
+    else:
+        for i in range(1, n_nodes):
+            parent = max(0, i - random.randint(1, 3))
+            lines.append({"from": f"bus_{parent}", "to": f"bus_{i}", "r_ohm": 0.2, "x_ohm": 0.08})
+        return {
+            "feeder_id": f"feeder_{idx:02d}",
+            "transformer_kva": 500,
+            "buses": buses,
+            "lines": lines,
+            "base_kv": 0.4,
+        }
 
 def write_feeders(out_dir: Path, count: int = 12) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
