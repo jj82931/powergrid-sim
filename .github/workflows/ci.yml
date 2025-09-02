@@ -23,7 +23,6 @@ jobs:
     defaults: { run: { working-directory: backend } }
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with: { python-version: '3.11' }
 
@@ -36,7 +35,18 @@ jobs:
       - run: python -m pip install --upgrade pip
       - run: pip install -r requirements.txt
 
-      - name: Run tests
+      # 핵심: 합성 네트워크 생성 (리포 루트의 data/에 쓴다)
+      - name: Generate synthetic feeders
+        working-directory: .
+        run: |
+          python - <<'PY'
+          from backend.app.models.network_gen import write_feeders
+          from pathlib import Path
+          write_feeders(Path("data/networks"))
+          print("generated:", list(Path("data/networks").glob("*.json"))[:2])
+          PY
+
+      - name: Run pytest
         run: pytest -q
 
   frontend:
@@ -44,10 +54,8 @@ jobs:
     defaults: { run: { working-directory: frontend } }
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with: { node-version: '20', cache: 'npm', cache-dependency-path: 'frontend/package-lock.json' }
-
       - run: npm ci
       - run: npm test --silent -- --watch=false
       - run: VITE_API_URL=http://localhost:8000 npm run build

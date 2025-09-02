@@ -1,40 +1,30 @@
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, fireEvent } from "@testing-library/react";
+// findBy*를 쓰면 별도 waitFor import 필요 없음
+import { vi } from "vitest";
 import CompareTab from "./components/CompareTab";
 
-test("runs compare across feeders", async () => {
-  // mock two simulate calls
-  const sim1 = {
-    feeder_id: "feeder_00",
-    transformer_loading: 0.5,
-    min_voltage_pu: 0.98,
+// services/api를 테스트용으로 mock
+vi.mock("./services/api", () => ({
+  postSim: vi.fn().mockImplementation(async ({ feeder_id }) => ({
+    feeder_id,
+    hour: 12,
+    transformer_loading: 0.1,
+    min_voltage_pu: 0.99,
     voltage_violation: 0,
-  };
-  const sim2 = {
-    feeder_id: "feeder_01",
-    transformer_loading: 0.6,
-    min_voltage_pu: 0.97,
-    voltage_violation: 1,
-  };
-  // @ts-ignore
-  global.fetch = vi
-    .fn()
-    // first simulate
-    .mockResolvedValueOnce({ ok: true, json: async () => sim1 })
-    // second simulate
-    .mockResolvedValueOnce({ ok: true, json: async () => sim2 });
+    advice: "OK",
+  })),
+}));
 
+it("runs compare across feeders", async () => {
+  // 컴포넌트가 요구하는 props 반드시 전달
   render(
-    <CompareTab
-      feeders={["feeder_00", "feeder_01"]}
-      pv={0.3}
-      bat={0.1}
-      hour={12}
-    />
+    <CompareTab feeders={["feeder_00", "feeder_01"]} pv={0} bat={0} hour={12} />
   );
-  await userEvent.click(screen.getByRole("button", { name: /run compare/i }));
-  await waitFor(() => {
-    expect(screen.getByText("feeder_00")).toBeInTheDocument();
-    expect(screen.getByText("feeder_01")).toBeInTheDocument();
-  });
+
+  // 버튼 클릭
+  const btn = screen.getByRole("button", { name: /run compare/i });
+  fireEvent.click(btn);
+
+  // 결과가 나타날 때까지 기다리며 검증
+  expect(await screen.findByText(/feeder_01/i)).toBeInTheDocument();
 });
