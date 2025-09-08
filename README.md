@@ -30,14 +30,6 @@ Many distribution studies start with basic questions: where are the voltage prob
 * Data: CSV first for load and PV profiles, JSON networks
 * Non-functional: average p95 <= 1 s on a 30-node feeder, cache TTL 300 s, unit tests >= 6, integration tests >= 3
 
-## Screenshots
-
-* Run tab with KPIs
-* PV sweep curve with hosting capacity
-* SVG line view and simple map
-
-(Add three small images under `docs/` and link them here.)
-
 ---
 
 ## Repository structure
