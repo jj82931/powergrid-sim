@@ -3,8 +3,7 @@
 Mini digital twin for low voltage feeders. Computes transformer loading, voltage limit violations, and PV hosting capacity across synthetic LV networks. Frontend is React TypeScript. Backend is FastAPI with pandapower. Deployed with Vercel and Render. No paid APIs and offline friendly first.
 
 > Live demo
-> Frontend Vercel: `https://<your-vercel>.vercel.app`
-> Backend Render: `https://powergrid-sim.onrender.com`
+> Frontend Vercel: `https://powergrid-sim.vercel.app/`
 
 ## Highlights
 
